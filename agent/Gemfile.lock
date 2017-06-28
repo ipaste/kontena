@@ -40,6 +40,7 @@ GEM
     faye-websocket (0.10.7)
       eventmachine (>= 0.12.0)
       websocket-driver (>= 0.5.1)
+    ffi (1.9.18)
     fluent-logger (0.6.2)
       msgpack (>= 0.5.6, < 2)
     hitimes (1.2.3)
@@ -49,6 +50,10 @@ GEM
     mixlib-log (1.6.0)
     msgpack (1.0.3)
     rake (10.4.2)
+    rbtrace (0.4.8)
+      ffi (>= 1.0.6)
+      msgpack (>= 0.4.3)
+      trollop (>= 1.16.2)
     rspec (3.1.0)
       rspec-core (~> 3.1.0)
       rspec-expectations (~> 3.1.0)
@@ -71,6 +76,7 @@ GEM
     thread_safe (0.3.4)
     timers (4.1.1)
       hitimes
+    trollop (2.1.2)
     tzinfo (1.2.2)
       thread_safe (~> 0.1)
     vmstat (2.1.0)
@@ -95,6 +101,7 @@ DEPENDENCIES
   fluent-logger (~> 0.6.2)
   msgpack (~> 1.0.3)
   rake
+  rbtrace
   rspec
   simplecov
   statsd-ruby
