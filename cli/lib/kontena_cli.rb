@@ -1,4 +1,4 @@
-require 'logger'
+require 'kontena/autoload_core'
 
 $KONTENA_START_TIME = Time.now.to_f
 at_exit do
@@ -7,6 +7,21 @@ at_exit do
 end
 
 module Kontena
+  module Cli
+    autoload :Config, 'kontena/cli/config'
+    autoload :ShellSpinner, 'kontena/cli/spinner'
+    autoload :Spinner, 'kontena/cli/spinner'
+    autoload :Common, 'kontena/cli/common'
+    autoload :TableGenerator, 'kontena/cli/table_generator'
+  end
+
+  autoload :Command, 'kontena/command'
+  autoload :Client, 'kontena/client'
+  autoload :StacksCache, 'kontena/stacks_cache'
+  autoload :PluginManager, 'kontena/plugin_manager'
+  autoload :MainCommand, 'kontena/main_command'
+  autoload :Errors, 'kontena/errors'
+
   # Run a kontena command like it was launched from the command line. Re-raises any exceptions,
   # except a SystemExit with status 0, which is considered a success.
   #
@@ -20,7 +35,7 @@ module Kontena
     else
       command = cmdline
     end
-    logger.debug { "Running Kontena.run(#{command.inspect}" }
+    logger.debug { "Running Kontena.run(#{command.inspect})" }
     result = Kontena::MainCommand.new(File.basename(__FILE__)).run(command)
     logger.debug { "Command completed, result: #{result.inspect} status: 0" }
     result
@@ -159,21 +174,11 @@ end
 require 'retriable'
 Retriable.configure do |c|
   c.on_retry = Proc.new do |exception, try, elapsed_time, next_interval|
-    return true unless ENV["DEBUG"]
-    puts "Retriable retry: #{try} - Exception: #{exception.class.name} - #{exception.message}. Elapsed: #{elapsed_time} Next interval: #{next_interval}"
+    Kontena.logger.debug { "Retriable retry: #{try} - Exception: #{exception.class.name} - #{exception.message}. Elapsed: #{elapsed_time} Next interval: #{next_interval}" }
   end
 end
 
 require 'ruby_dig'
 require 'shellwords'
-require "safe_yaml"
-SafeYAML::OPTIONS[:default_mode] = :safe
 require 'kontena/cli/version'
 Kontena.logger.debug { "Kontena CLI #{Kontena::Cli::VERSION} (ruby-#{RUBY_VERSION}+#{RUBY_PLATFORM})" }
-require 'kontena/cli/common'
-require 'kontena/command'
-require 'kontena/client'
-require 'kontena/stacks_cache'
-require 'kontena/plugin_manager'
-require 'kontena/main_command'
-require 'kontena/cli/spinner'

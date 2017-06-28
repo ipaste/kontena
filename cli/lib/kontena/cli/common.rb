@@ -1,19 +1,44 @@
-require 'pastel'
-require 'uri'
-require 'io/console'
-
-require 'kontena/cli/config'
-require 'kontena/cli/spinner'
-require 'kontena/cli/table_generator'
 require 'forwardable'
+require 'kontena_cli'
 
 module Kontena
+  autoload :Client, 'kontena/client'
+
   module Cli
+    autoload :ShellSpinner, 'kontena/cli/spinner'
+    autoload :Spinner, 'kontena/cli/spinner'
+    autoload :Config, 'kontena/cli/config'
+
     module Common
       extend Forwardable
 
-      def_delegators :Kontena, :pastel, :prompt, :logger
-      def_delegator Kontena::Cli::Spinner, :spin, :spinner
+      def_delegators :prompt, :ask, :yes?
+      def_delegators :config,
+        :current_grid=, :require_current_grid, :current_master,
+        :current_master=, :require_current_master, :require_current_account,
+        :current_account
+      def_delegator :config, :config_filename, :settings_filename
+      def_delegator :client, :server_version, :api_url_version
+
+      def logger
+        Kontena.logger
+      end
+
+      def prompt
+        Kontena.prompt
+      end
+
+      def pastel
+        Kontena.pastel
+      end
+
+      def spinner(msg, &block)
+         Kontena::Cli::Spinner.spin(msg, &block)
+      end
+
+      def config
+        Kontena::Cli::Config.instance
+      end
 
       # Read from STDIN. If stdin is a console, use prompt to ask.
       # @param [String] message
@@ -120,10 +145,7 @@ module Kontena
         $stderr.puts " [#{error}] #{msg}"
         exit code
       end
-
-      def config
-        Kontena::Cli::Config.instance
-      end
+      module_function :exit_with_error
 
       def require_api_url
         config.require_current_master.url
@@ -155,18 +177,6 @@ module Kontena
         logger.debug "Refreshing failed: #{ex.class.name} : #{ex.message}"
       end
 
-      def require_current_master
-        config.require_current_master
-      end
-
-      def require_current_account
-        config.require_current_account
-      end
-
-      def current_account
-        config.current_account
-      end
-
       def kontena_account
         @kontena_account ||= config.current_account
       end
@@ -178,10 +188,6 @@ module Kontena
         true
       end
 
-      def api_url_version
-        client.server_version
-      end
-
       def cloud_client
         @cloud_client ||= Kontena::Client.new(kontena_account.url, kontena_account.token, prefix: '/')
       end
@@ -191,11 +197,13 @@ module Kontena
       end
 
       def client(token = nil, api_url = nil)
+        return @client if @client
+
         if token.kind_of?(String)
           token = Kontena::Cli::Config::Token.new(access_token: token)
         end
 
-        @client ||= Kontena::Client.new(
+        @client = Kontena::Client.new(
           api_url || require_current_master.url,
           token || require_current_master.token
         )
@@ -205,24 +213,8 @@ module Kontena
         @client = nil
       end
 
-      def settings_filename
-        config.config_filename
-      end
-
-      def settings
-        config
-      end
-
       def api_url
         config.require_current_master.url
-      end
-
-      def current_grid=(grid)
-        config.current_grid=(grid)
-      end
-
-      def require_current_grid
-        config.require_current_grid
       end
 
       def clear_current_grid
@@ -238,25 +230,9 @@ module Kontena
         config.find_server_index(require_current_master.name)
       end
 
-      def current_master
-        config.current_master
-      end
-
-      def current_master=(master_alias)
-        config.current_master = master_alias
-      end
-
       def error(message = "Error")
         prompt.error(message)
         exit(1)
-      end
-
-      def ask(question = "")
-        prompt.ask(question)
-      end
-
-      def yes?(question = "")
-        prompt.yes?(question)
       end
 
       def confirm_command(name, message = nil)
@@ -295,14 +271,44 @@ module Kontena
       def any_key_to_continue_with_timeout(timeout=9)
         return nil if running_silent?
         return nil unless $stdout.tty?
-        prompt.keypress("Press any key to continue or ctrl-c to cancel (Automatically continuing in :countdown seconds) ...", timeout: timeout)
+        start_time = Time.now.to_i
+        end_time   = start_time + timeout
+        Thread.main['any_key.timed_out']   = false
+        msg = "Press any key to continue or ctrl-c to cancel.. (Automatically continuing in ? seconds)"
+
+        reader_thread = Thread.new do
+          Thread.main['any_key.char'] = $stdin.getch
+        end
+
+        countdown_thread = Thread.new do
+          time_left = timeout
+          while time_left > 0 && Thread.main['any_key.char'].nil?
+            print "\r#{pastel.bright_white("#{msg.sub("?", time_left.to_s)}")} "
+            time_left = end_time - Time.now.to_i
+            sleep 0.1
+          end
+          print "\r#{' ' * msg.length}  \r"
+          reader_thread.kill if reader_thread.alive?
+        end
+
+        countdown_thread.join
+
+        if Thread.main['any_key.char'] == "\u0003"
+          error "Canceled"
+        end
       end
 
       def any_key_to_continue(timeout = nil)
         return nil if running_silent?
         return nil unless $stdout.tty?
         return any_key_to_continue_with_timeout(timeout) if timeout
-        prompt.keypress("Press any key to continue or ctrl-c to cancel..")
+        msg = "Press any key to continue or ctrl-c to cancel.. "
+        print pastel.bright_cyan("#{msg}")
+        char = $stdin.getch
+        print "\r#{' ' * msg.length}\r"
+        if char == "\u0003"
+          error "Canceled"
+        end
       end
 
       def display_account_login_info
@@ -351,6 +357,7 @@ module Kontena
       def display_logo
         puts File.read(File.expand_path('../../../../LOGO', __FILE__))
       end
+      module_function :display_logo
     end
   end
 end

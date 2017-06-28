@@ -33,7 +33,6 @@ module Kontena::Cli::Nodes
     def fields
       return ['name'] if quiet?
       {
-        ' ' =>   'health_icon',
         name:    'name',
         version: 'agent_version',
         status:  'status',
@@ -66,11 +65,11 @@ module Kontena::Cli::Nodes
         unless quiet?
           grid_health = grid_health(grid, grid_nodes)
           grid_nodes.each do |node|
-            node['health_icon'] = health_icon(node_health(node, grid_health))
+            node['name'] = health_icon(node_health(node, grid_health)) + " " + (node['name'] || '(initializing)')
           end
         end
 
-        grid_nodes.sort { |n| n['node_number'] }
+        grid_nodes.sort_by { |n| n['node_number'] }
       end
     end
 

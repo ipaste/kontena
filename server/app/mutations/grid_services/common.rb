@@ -78,14 +78,13 @@ module GridServices
     def build_grid_service_secrets(existing_secrets)
       service_secrets = []
       self.secrets.each do |secret|
-        service_secret = existing_secrets.find{|s| s.secret == secret['secret']}
+        service_secret = existing_secrets.find{|s| s.secret == secret['secret'] && s.name == secret['name'] }
         unless service_secret
           service_secret = GridServiceSecret.new(
               secret: secret['secret'],
               name: secret['name']
           )
         end
-        service_secret.name = secret['name']
         service_secrets << service_secret
       end
 
@@ -241,7 +240,7 @@ module GridServices
           array :cap_drop do
             string
           end
-          string :net, matches: /^(bridge|host|container:.+)$/
+          string :net, matches: /\A(bridge|host|container:.+)\z/
           hash :log_opts do
             string :*
           end
@@ -249,7 +248,7 @@ module GridServices
           array :devices do
             string
           end
-          string :pid, matches: /^(host)$/
+          string :pid, in: ['host']
           hash :hooks do
             optional do
               array :post_start do
@@ -266,8 +265,8 @@ module GridServices
           end
           hash :health_check do
             required do
-              integer :port, nils: true
-              string :protocol, matches: /^(http|tcp)$/, nils: true
+              integer :port, nils: true, min: 1, max: 65535
+              string :protocol, in: ['http', 'tcp'], nils: true
             end
             optional do
               string :uri

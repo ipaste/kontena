@@ -14,6 +14,7 @@ module Kontena::Cli::Vault
     requires_current_master
 
     def parsed_input
+      require "json"
       json? ? JSON.load(input) : YAML.safe_load(input)
     end
 

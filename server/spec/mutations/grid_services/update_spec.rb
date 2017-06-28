@@ -195,7 +195,7 @@ describe GridServices::Update do
           }.to change{service.reload.revision}.and change{service.reload.updated_at}
         end
 
-        skip 'removes secrets' do
+        it 'removes secrets' do
           subject = described_class.new(
               grid_service: service,
               secrets: [
@@ -207,6 +207,50 @@ describe GridServices::Update do
           }.to change{service.reload.revision}.and change{service.reload.updated_at}
 
           expect(service.reload.secrets.map{|gss| gss.secret}).to eq ['SECRET1']
+        end
+      end
+
+      context 'for a service with multiple names for the same secret' do
+        let(:secret1) { GridSecret.create!(grid: grid, name: 'SECRET1', value: 'secret') }
+
+        let(:service) {
+          GridService.create(grid: grid, stack: stack, name: 'redis',
+            image_name: 'redis:2.8',
+            secrets: [
+              {secret: secret1.name, name: 'SECRET1'},
+              {secret: secret1.name, name: 'SECRET2'},
+            ],
+          )
+        }
+
+        it 'keeps both secret names' do
+          subject = described_class.new(
+              grid_service: service,
+              secrets: [
+                {secret: secret1.name, name: 'SECRET1'},
+                {secret: secret1.name, name: 'SECRET2'},
+              ]
+          )
+          outcome = nil
+          expect {
+            outcome = subject.run
+
+            expect(outcome).to be_success
+          }.to not_change{service.reload.revision}.and not_change{service.reload.updated_at}
+
+          expect(outcome.result.secrets.map{|s| s.attributes}).to match [
+            hash_including(
+              'secret' => 'SECRET1',
+              'type' => 'env',
+              'name' => 'SECRET1',
+            ),
+            hash_including(
+              'secret' => 'SECRET1',
+              'type' => 'env',
+              'name' => 'SECRET2',
+            ),
+          ]
+
         end
       end
     end
@@ -316,7 +360,7 @@ describe GridServices::Update do
           expect(service.service_volumes.map{|sv| sv.to_s}).to eq ['/foo:/foo', '/foo2:/foo2']
         end
 
-        skip 'deletes volumes' do
+        it 'deletes volumes' do
           subject = described_class.new(
               grid_service: service,
               volumes: [
@@ -467,7 +511,7 @@ describe GridServices::Update do
           }.to not_change{service.reload.revision}.and not_change{service.reload.updated_at}
         end
 
-        skip 'clears links' do
+        it 'clears links' do
           subject = described_class.new(
               grid_service: service,
               links: [ ],
@@ -477,7 +521,7 @@ describe GridServices::Update do
           }.to change{service.reload.revision}.and change{service.reload.updated_at}.and change{service.reload.grid_service_links.count}.from(1).to(0)
         end
 
-        skip 'deletes links' do
+        it 'deletes links' do
           service.link_to(linked_service3)
           expect(service.grid_service_links.count).to eq 2
 
