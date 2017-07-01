@@ -259,6 +259,14 @@ Recall the optional COMMAND
 bundle exec thin -p 3000
 ```
 
+#### cpus
+
+Specify how much of the available CPU resources a container can use. For instance, if the host machine has two CPUs and you set `cpus: 1.5`, the container will be guaranteed to be able to access at most one and a half of the CPUs. Kontena scheduler will automatically target deployment to nodes that have at least number of specified CPUs available.
+
+```
+cpus: 1.5
+```
+
 #### cpu_shares
 
 By default, all containers get the same proportion of CPU cycles.
@@ -606,7 +614,7 @@ variables:
     to:
       vault: EXAMPLE_MYSQL_ROOT_PASSWORD
   app_domain:
-    type: string 
+    type: string
     default: www.my-app.com
     from:
       prompt: App domain
