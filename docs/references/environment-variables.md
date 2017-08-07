@@ -53,14 +53,17 @@ The `KONTENA_URI` and either of `KONTENA_TOKEN` or `KONTENA_NODE_TOKEN` is requi
 
 ## Kontena CLI
 
+You can use a file named `.kontena-env` in your current working directory to automatically set any CLI environment variables.
+
 - `KONTENA_URL`: Kontena Master URL
 - `KONTENA_GRID`: Kontena Grid name
 - `KONTENA_TOKEN`: Kontena Master access token
 - `KONTENA_MASTER`: use existing Kontena Master from CLI config file
-- `SSL_IGNORE_ERRORS`: set true to bypass certificate errors
-- `DEBUG`: set true to get verbose messages
-- `EXCON_DEBUG`: set true to get verbose messages from network calls
-
+- `SSL_IGNORE_ERRORS`: set to true to bypass certificate errors
+- `DEBUG`: set true to get verbose messages. Set to 'api' to see full message bodies.
+- `EXCON_DEBUG`: set to true to get verbose messages from network calls
+- `NO_ENV`: set to true to skip loading `.kontena-env`
+-
 ## Kontena services
 
 Each service container deployed by Kontena gets populated by following environment variables in addition to the ones defined in the service configuration and in the container image:
