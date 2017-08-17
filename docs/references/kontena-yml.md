@@ -159,6 +159,24 @@ affinity:
 
 #### hooks
 
+**pre_start**
+
+`pre_start` hooks define commands that are executed before a container is started on a node. If multiple hooks are provided they are executed in the order defined. Note that these commands are executed *before* `wait_for_port` check.
+
+- `name`: unique name for hook
+- `cmd`: command to be executed
+- `instances`: comma separated list of instance numbers where hook is executed (`*` for all instances)
+- `oneshot`: should this hook be executed only once in service lifetime (default: `false`)
+
+```
+hooks:
+  pre_start:
+    - name: migrate
+      cmd: rake db:migrate
+      instances: 1
+      oneshot: false
+```
+
 **post_start**
 
 `post_start` hooks define commands that are executed after a container is started on a node. If multiple hooks are provided they are executed in the order defined. Note that these commands are executed *before* `wait_for_port` check.
