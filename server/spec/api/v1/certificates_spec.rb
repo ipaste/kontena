@@ -71,5 +71,19 @@ describe '/v1/containers' do
     end
   end
 
+  describe 'GET /v1/certificates/<grid>/<subject>' do
+    it 'gets a certificate' do
+      certificate
+      get "/v1/certificates/#{grid.name}/kontena.io", nil, request_headers
+      expect(response.status).to eq(200)
+      expect(json_response['subject']).to eq('kontena.io')
+    end
+
+    it '404 for non-existing cert' do
+      get "/v1/certificates/#{grid.name}/foobar.io", nil, request_headers
+      expect(response.status).to eq(404)
+    end
+  end
+
 
 end

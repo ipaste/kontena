@@ -17,4 +17,8 @@ class Certificate
   index({ subject: 1 })
   index({ grid_id: 1, subject: 1 }, {unique: true})
 
+  def to_path
+    "#{self.grid.name}/#{self.subject}"
+  end
+
 end
