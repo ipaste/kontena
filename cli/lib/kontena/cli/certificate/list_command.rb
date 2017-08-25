@@ -5,6 +5,7 @@ module Kontena::Cli::Certificate
     include Kontena::Cli::Common
     include Kontena::Cli::GridOptions
     include Kontena::Cli::TableGenerator::Helper
+    include Kontena::Util
 
     requires_current_master
     requires_current_master_token
@@ -14,33 +15,31 @@ module Kontena::Cli::Certificate
     THREE_DAYS = 3 * 24 * 60 * 60
 
     def fields
-      quiet? ? ['subject'] : {subject: 'subject', "valid until" => 'valid_until'}
+      quiet? ? ['subject'] : {subject: 'subject', "expiration" => 'expires_in'}
     end
 
     def certificates
       client.get("grids/#{current_grid}/certificates")['certificates']
     end
 
-    def status_icon(row)
+    def status_icon(expires_in)
       icon = '⊛'.freeze
-      valid_until = Time.parse(row['valid_until'])
 
-      if valid_until < (Time.now + THREE_DAYS)
+      if expires_in < 0
         icon.colorize(:red)
-      elsif valid_until < (Time.now + SEVEN_DAYS)
-        icon.colorize(:yellow)
       else
         icon.colorize(:green)
       end
 
     end
 
-    def status_color(row)
-      valid_until = Time.parse(row['valid_until'])
+    def status_color(expires_in)
 
-      if valid_until < (Time.now + THREE_DAYS)
+      if expires_in < 0
         :red
-      elsif valid_until < (Time.now + SEVEN_DAYS)
+      elsif expires_in < THREE_DAYS
+        :bright_yellow
+      elsif expires_in < SEVEN_DAYS
         :yellow
       else
         :green
@@ -48,11 +47,29 @@ module Kontena::Cli::Certificate
 
     end
 
+    def expires_in(certificate)
+      valid_until = Time.parse(certificate['valid_until'])
+      (valid_until - Time.now).to_i
+    end
+
+    def expires_in_human(expires_in)
+      if expires_in > 0
+        text = seconds_to_human(expires_in)
+      else
+        text = seconds_to_human(-1 * expires_in) + ' ago'
+      end
+
+      text.colorize(status_color(expires_in))
+    end
+
     def execute
-      print_table(certificates) do |row|
-        #row['subject'] = status_icon(row) + " " + row['subject'] unless quiet?
-        row['valid_until'] = row['valid_until'].colorize(status_color(row))
+      print_table(certificates) do |certificate|
+        expires_in = expires_in(certificate)
+        certificate['subject'] = status_icon(expires_in) + " " + certificate['subject'] unless quiet?
+        next if quiet? # No need to fiddle with colors when they will not get printed
+        certificate['expires_in'] = expires_in_human(expires_in)
       end
     end
+
   end
 end
