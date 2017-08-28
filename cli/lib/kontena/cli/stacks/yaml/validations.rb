@@ -104,7 +104,8 @@ module Kontena::Cli::Stacks::YAML
 
     def dependency_schema
       {
-        'stack' => optional('string')
+        'stack' => optional('string'),
+        'variables' => optional(-> (value) { value.is_a?(Hash) })
       }
     end
   end
